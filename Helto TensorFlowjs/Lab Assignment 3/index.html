@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TensorFlow.js Printing Results</title>
+
+    <!-- TensorFlow.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+</head>
+<body>
+    <h2>TensorFlow.js Printing Results</h2>
+    <p>Open Chrome Console to view printed output</p>
+
+    <script>
+        // Create a tensor
+        const tensor = tf.tensor([10, 20, 30, 40]);
+
+        // Print tensor using print()
+        console.log("Printing tensor using tensor.print():");
+        tensor.print();
+
+        // Print tensor values using array()
+        tensor.array().then(values => {
+            console.log("Printing tensor as JavaScript array:");
+            console.log(values);
+        });
+
+        // Print individual values
+        tensor.data().then(data => {
+            console.log("Printing individual values:");
+            data.forEach((value, index) => {
+                console.log("Index", index, ":", value);
+            });
+        });
+    </script>
+</body>
+</html>

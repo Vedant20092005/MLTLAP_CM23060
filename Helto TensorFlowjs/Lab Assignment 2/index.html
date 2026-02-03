@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TensorFlow.js Addition</title>
+
+    <!-- TensorFlow.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+</head>
+<body>
+    <h2>TensorFlow.js Addition Example</h2>
+    <p>Check Chrome Console for output</p>
+
+    <script>
+        // Display TensorFlow.js version
+        console.log("TensorFlow.js version:", tf.version.tfjs);
+
+        // Create two tensors
+        const a = tf.tensor([1, 2, 3, 4]);
+        const b = tf.tensor([5, 6, 7, 8]);
+
+        console.log("Tensor A:");
+        a.print();
+
+        console.log("Tensor B:");
+        b.print();
+
+        // Perform addition
+        const result = a.add(b);
+
+        console.log("Addition Result (A + B):");
+        result.print();
+    </script>
+</body>
+</html>
