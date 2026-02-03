@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TensorFlow.js Regression Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+</head>
+<body>
+
+<h2>TensorFlow.js Linear Regression</h2>
+<canvas id="plot" width="600" height="400" style="border:1px solid black;"></canvas>
+
+<script>
+async function runRegression() {
+
+    console.log("TensorFlow.js version:", tf.version.tfjs);
+
+    // 1. Generate synthetic data
+    const xs = [];
+    const ys = [];
+
+    for (let i = 0; i < 50; i++) {
+        let x = i;
+        let y = 2 * x + 1 + Math.random() * 5; // y = 2x + 1 + noise
+        xs.push(x);
+        ys.push(y);
+    }
+
+    const xTensor = tf.tensor2d(xs, [xs.length, 1]);
+    const yTensor = tf.tensor2d(ys, [ys.length, 1]);
+
+    // 2. Create model
+    const model = tf.sequential();
+    model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+
+    model.compile({
+        optimizer: tf.train.sgd(0.001),
+        loss: 'meanSquaredError'
+    });
+
+    // 3. Train model
+    console.log("Training started...");
+    await model.fit(xTensor, yTensor, {
+        epochs: 200,
+        callbacks: {
+            onEpochEnd: (epoch, logs) => {
+                if (epoch % 50 === 0) {
+                    console.log(`Epoch ${epoch} - Loss: ${logs.loss}`);
+                }
+            }
+        }
+    });
+    console.log("Training completed!");
+
+    // 4. Predict values
+    const predictions = model.predict(xTensor);
+    const predValues = await predictions.data();
+
+    console.log("Actual vs Predicted:");
+    for (let i = 0; i < xs.length; i++) {
+        console.log(`x=${xs[i]} | Actual=${ys[i].toFixed(2)} | Predicted=${predValues[i].toFixed(2)}`);
+    }
+
+    // 5. Plot Actual vs Predicted
+    const canvas = document.getElementById("plot");
+    const ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Scaling
+    const maxX = Math.max(...xs);
+    const maxY = Math.max(...ys, ...predValues);
+
+    function scaleX(x) {
+        return (x / maxX) * (canvas.width - 40) + 20;
+    }
+
+    function scaleY(y) {
+        return canvas.height - ((y / maxY) * (canvas.height - 40) + 20);
+    }
+
+    // Draw actual points (blue)
+    ctx.fillStyle = "blue";
+    for (let i = 0; i < xs.length; i++) {
+        ctx.beginPath();
+        ctx.arc(scaleX(xs[i]), scaleY(ys[i]), 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Draw predicted points (red)
+    ctx.fillStyle = "red";
+    for (let i = 0; i < xs.length; i++) {
+        ctx.beginPath();
+        ctx.arc(scaleX(xs[i]), scaleY(predValues[i]), 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    console.log("Blue = Actual values, Red = Predicted values");
+}
+
+runRegression();
+</script>
+
+</body>
+</html>

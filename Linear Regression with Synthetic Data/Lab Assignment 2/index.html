@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Learning Rate Experiment - TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+</head>
+<body>
+
+<h2>Learning Rate vs Convergence (Check Console)</h2>
+
+<script>
+async function runExperiment() {
+
+    console.log("TensorFlow.js version:", tf.version.tfjs);
+
+    // 1. Generate synthetic data
+    const xs = [];
+    const ys = [];
+
+    for (let i = 0; i < 50; i++) {
+        let x = i;
+        let y = 3 * x + 5 + Math.random() * 10; // y = 3x + 5 + noise
+        xs.push(x);
+        ys.push(y);
+    }
+
+    const xTensor = tf.tensor2d(xs, [xs.length, 1]);
+    const yTensor = tf.tensor2d(ys, [ys.length, 1]);
+
+    // Learning rates to test
+    const learningRates = [0.0001, 0.01, 0.1];
+
+    for (let lr of learningRates) {
+
+        console.log("\n==============================");
+        console.log("Training with Learning Rate:", lr);
+        console.log("==============================");
+
+        // 2. Create model
+        const model = tf.sequential();
+        model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+
+        model.compile({
+            optimizer: tf.train.sgd(lr),
+            loss: 'meanSquaredError'
+        });
+
+        // 3. Train model
+        await model.fit(xTensor, yTensor, {
+            epochs: 100,
+            callbacks: {
+                onEpochEnd: (epoch, logs) => {
+                    if (epoch % 20 === 0) {
+                        console.log(`LR=${lr} | Epoch ${epoch} | Loss=${logs.loss.toFixed(4)}`);
+                    }
+                }
+            }
+        });
+
+        // 4. Final loss
+        const finalLoss = model.evaluate(xTensor, yTensor);
+        console.log(`Final Loss with LR=${lr}:`, finalLoss.dataSync()[0].toFixed(4));
+    }
+
+    console.log("\nExperiment Completed!");
+}
+
+runExperiment();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unseen Data Prediction - TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+</head>
+<body>
+
+<h2>Prediction on Unseen Inputs (Check Console)</h2>
+
+<script>
+async function runPrediction() {
+
+    console.log("TensorFlow.js version:", tf.version.tfjs);
+
+    // 1. Training data (synthetic)
+    const xs = [];
+    const ys = [];
+
+    for (let i = 0; i < 50; i++) {
+        let x = i;
+        let y = 4 * x + 10 + Math.random() * 5; // y = 4x + 10 + noise
+        xs.push(x);
+        ys.push(y);
+    }
+
+    const xTrain = tf.tensor2d(xs, [xs.length, 1]);
+    const yTrain = tf.tensor2d(ys, [ys.length, 1]);
+
+    // 2. Build regression model
+    const model = tf.sequential();
+    model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+
+    model.compile({
+        optimizer: tf.train.sgd(0.01),
+        loss: 'meanSquaredError'
+    });
+
+    // 3. Train model
+    console.log("Training started...");
+    await model.fit(xTrain, yTrain, {
+        epochs: 150,
+        callbacks: {
+            onEpochEnd: (epoch, logs) => {
+                if (epoch % 30 === 0) {
+                    console.log(`Epoch ${epoch} | Loss: ${logs.loss.toFixed(4)}`);
+                }
+            }
+        }
+    });
+    console.log("Training completed!");
+
+    // 4. Unseen test inputs
+    const unseenXs = [55, 60, 65, 70];
+    const xTest = tf.tensor2d(unseenXs, [unseenXs.length, 1]);
+
+    // 5. Predict on unseen data
+    const predictions = model.predict(xTest);
+    const predValues = await predictions.data();
+
+    // 6. Compare with expected values
+    console.log("\nUnseen Input Predictions:");
+    console.log("Formula used: y = 4x + 10");
+
+    for (let i = 0; i < unseenXs.length; i++) {
+        const expected = 4 * unseenXs[i] + 10;
+        console.log(
+            `x = ${unseenXs[i]} | Predicted = ${predValues[i].toFixed(2)} | Expected = ${expected.toFixed(2)}`
+        );
+    }
+
+    console.log("\nPrediction completed successfully!");
+}
+
+runPrediction();
+</script>
+
+</body>
+</html>
