@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sentiment AI Trainer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+<style>
+
+body{
+margin:0;
+font-family: 'Segoe UI', sans-serif;
+background: linear-gradient(135deg,#667eea,#764ba2);
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+color:white;
+}
+
+.container{
+width:750px;
+background:rgba(255,255,255,0.1);
+backdrop-filter:blur(15px);
+padding:30px;
+border-radius:20px;
+box-shadow:0 10px 40px rgba(0,0,0,0.3);
+}
+
+h1{
+text-align:center;
+margin-bottom:20px;
+}
+
+.section{
+margin-top:20px;
+padding:15px;
+background:rgba(255,255,255,0.08);
+border-radius:15px;
+}
+
+button{
+background:#00c9a7;
+border:none;
+padding:12px 20px;
+border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+transition:0.3s;
+}
+
+button:hover{
+background:#00a68c;
+transform:scale(1.05);
+}
+
+button:disabled{
+background:gray;
+cursor:not-allowed;
+}
+
+input{
+width:100%;
+padding:12px;
+border:none;
+border-radius:8px;
+margin-top:10px;
+outline:none;
+}
+
+.log-box{
+background:#000;
+color:#00ff9c;
+padding:10px;
+height:150px;
+overflow-y:auto;
+font-family:monospace;
+border-radius:8px;
+margin-top:10px;
+}
+
+.result{
+margin-top:15px;
+font-size:20px;
+font-weight:bold;
+text-align:center;
+}
+
+.status{
+text-align:center;
+margin-top:10px;
+font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🤖 Sentiment Analysis Trainer</h1>
+
+<div class="section">
+<button id="trainBtn">🚀 Train Model</button>
+<p id="status" class="status">Status: Ready</p>
+
+<h3>📊 Training Logs</h3>
+<div id="log" class="log-box"></div>
+</div>
+
+<div class="section">
+<h3>💬 Test Sentiment</h3>
+
+<input id="sentenceInput" placeholder="Type something like 'I love this'">
+
+<button id="predictBtn">🔍 Predict</button>
+
+<div id="result" class="result"></div>
+</div>
+
+</div>
+
+<script>
+
+// SAME JS (no changes)
+
+// Dataset
+const data = [
+{ text:"i love this product", label:1 },
+{ text:"this is amazing and great", label:1 },
+{ text:"excellent work and very happy", label:1 },
+{ text:"great experience highly recommend", label:1 },
+{ text:"fantastic and wonderful", label:1 },
+
+{ text:"i hate this so much", label:0 },
+{ text:"this is terrible and bad", label:0 },
+{ text:"worst experience ever", label:0 },
+{ text:"very disappointed with this", label:0 },
+{ text:"poor quality and awful", label:0 }
+];
+
+const words = Array.from(new Set(data.flatMap(d=>d.text.split(" "))));
+const vocab = Object.fromEntries(words.map((w,i)=>[w,i+1]));
+const vocabSize = words.length+1;
+const maxLen = 5;
+
+function encode(text){
+let tokens = text.toLowerCase().split(" ").map(w=>vocab[w] || 0);
+if(tokens.length < maxLen){
+tokens = [...tokens,...Array(maxLen-tokens.length).fill(0)];
+}else{
+tokens = tokens.slice(0,maxLen);
+}
+return tokens;
+}
+
+const xs = tf.tensor2d(data.map(d=>encode(d.text)));
+const ys = tf.tensor2d(data.map(d=>[d.label]));
+
+const model = tf.sequential();
+
+model.add(tf.layers.embedding({
+inputDim:vocabSize,
+outputDim:8,
+inputLength:maxLen
+}));
+
+model.add(tf.layers.flatten());
+
+model.add(tf.layers.dense({
+units:1,
+activation:"sigmoid"
+}));
+
+model.compile({
+optimizer:"adam",
+loss:"binaryCrossentropy",
+metrics:["accuracy"]
+});
+
+const logBox = document.getElementById("log");
+const status = document.getElementById("status");
+const trainBtn = document.getElementById("trainBtn");
+const predictBtn = document.getElementById("predictBtn");
+const input = document.getElementById("sentenceInput");
+const result = document.getElementById("result");
+
+trainBtn.onclick = async ()=>{
+trainBtn.disabled = true;
+status.innerText = "Training Model...";
+
+await model.fit(xs,ys,{
+epochs:40,
+callbacks:{
+onEpochEnd:(epoch,logs)=>{
+const acc = logs.acc || logs.accuracy;
+logBox.innerHTML += `Epoch ${epoch+1} | loss: ${logs.loss.toFixed(4)} | acc: ${acc.toFixed(4)}<br>`;
+logBox.scrollTop = logBox.scrollHeight;
+}
+}
+});
+
+status.innerText = "Training Complete ✅";
+};
+
+predictBtn.onclick = ()=>{
+const text = input.value;
+
+if(!text){
+result.innerText="⚠️ Enter a sentence";
+return;
+}
+
+const encoded = encode(text);
+const tensor = tf.tensor2d([encoded]);
+const prediction = model.predict(tensor);
+const value = prediction.dataSync()[0];
+
+if(value > 0.5){
+result.innerText = "😊 Positive Sentiment";
+result.style.color="#00ff9c";
+}else{
+result.innerText = "😞 Negative Sentiment";
+result.style.color="#ff4d4d";
+}
+};
+
+</script>
+
+</body>
+</html>

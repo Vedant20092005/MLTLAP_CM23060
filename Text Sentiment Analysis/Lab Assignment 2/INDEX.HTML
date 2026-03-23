@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>AI Sentiment Analyzer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+<style>
+
+body{
+margin:0;
+font-family:Segoe UI,Arial;
+background:linear-gradient(135deg,#667eea,#764ba2);
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+.container{
+background:white;
+padding:30px;
+width:420px;
+border-radius:15px;
+box-shadow:0 15px 40px rgba(0,0,0,0.2);
+text-align:center;
+}
+
+h1{
+margin-bottom:10px;
+color:#333;
+}
+
+p{
+color:#666;
+font-size:14px;
+}
+
+textarea{
+width:100%;
+height:80px;
+padding:10px;
+margin-top:15px;
+border-radius:8px;
+border:1px solid #ccc;
+resize:none;
+font-size:14px;
+}
+
+button{
+margin-top:15px;
+padding:10px 20px;
+border:none;
+border-radius:8px;
+background:#667eea;
+color:white;
+font-size:16px;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+background:#5a67d8;
+}
+
+.loader{
+margin-top:15px;
+display:none;
+}
+
+.result{
+margin-top:20px;
+padding:15px;
+border-radius:10px;
+font-size:18px;
+font-weight:bold;
+}
+
+.positive{
+background:#d4edda;
+color:#155724;
+}
+
+.negative{
+background:#f8d7da;
+color:#721c24;
+}
+
+.score{
+font-size:14px;
+margin-top:5px;
+}
+
+.status{
+margin-top:10px;
+font-size:13px;
+color:#555;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🤖 Sentiment Analyzer</h1>
+<p>Enter a sentence and detect sentiment instantly</p>
+
+<textarea id="inputText" placeholder="Type something..."></textarea>
+
+<button onclick="analyze()">Analyze</button>
+
+<div class="loader" id="loader">⏳ Processing...</div>
+
+<div id="result"></div>
+
+<p class="status" id="status">Status: Training model...</p>
+
+</div>
+
+<script>
+
+// Dataset
+const data = [
+{ text:"i love this product", label:1 },
+{ text:"this is amazing", label:1 },
+{ text:"very happy with this", label:1 },
+{ text:"fantastic experience", label:1 },
+{ text:"this is awesome", label:1 },
+
+{ text:"i hate this", label:0 },
+{ text:"this is terrible", label:0 },
+{ text:"very bad product", label:0 },
+{ text:"worst experience", label:0 },
+{ text:"not good", label:0 }
+];
+
+// Vocabulary
+const words = Array.from(new Set(data.flatMap(d=>d.text.split(" "))));
+const vocab = Object.fromEntries(words.map((w,i)=>[w,i+1]));
+const vocabSize = words.length+1;
+const maxLen = 5;
+
+// Encode
+function encode(text){
+let tokens = text.toLowerCase().split(" ").map(w=>vocab[w] || 0);
+
+if(tokens.length < maxLen){
+tokens = [...tokens,...Array(maxLen-tokens.length).fill(0)];
+}else{
+tokens = tokens.slice(0,maxLen);
+}
+
+return tokens;
+}
+
+// Tensors
+const xs = tf.tensor2d(data.map(d=>encode(d.text)));
+const ys = tf.tensor2d(data.map(d=>[d.label]));
+
+// Model
+const model = tf.sequential();
+
+model.add(tf.layers.embedding({
+inputDim:vocabSize,
+outputDim:16,
+inputLength:maxLen
+}));
+
+model.add(tf.layers.globalAveragePooling1d());
+
+model.add(tf.layers.dense({units:8,activation:"relu"}));
+model.add(tf.layers.dense({units:1,activation:"sigmoid"}));
+
+model.compile({
+optimizer:"adam",
+loss:"binaryCrossentropy",
+metrics:["accuracy"]
+});
+
+// Train automatically on load
+async function train(){
+await tf.nextFrame();
+
+await model.fit(xs,ys,{
+epochs:50
+});
+
+document.getElementById("status").innerText="✅ Model Ready!";
+}
+
+train();
+
+// Analyze function
+async function analyze(){
+
+const text = document.getElementById("inputText").value;
+
+if(!text){
+alert("Please enter text");
+return;
+}
+
+document.getElementById("loader").style.display="block";
+
+await tf.nextFrame();
+
+const encoded = encode(text);
+const input = tf.tensor2d([encoded]);
+
+const prediction = model.predict(input);
+const score = prediction.dataSync()[0];
+
+document.getElementById("loader").style.display="none";
+
+const sentiment = score > 0.5 ? "Positive 😊" : "Negative 😞";
+
+const resultHTML = `
+<div class="result ${score>0.5?'positive':'negative'}">
+"${text}"<br>
+${sentiment}
+<div class="score">Confidence: ${score.toFixed(3)}</div>
+</div>
+`;
+
+document.getElementById("result").innerHTML = resultHTML;
+
+}
+
+</script>
+
+</body>
+</html>
