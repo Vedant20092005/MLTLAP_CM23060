@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Pro AI Image Classifier</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+box-sizing:border-box;
+}
+
+body{
+margin:0;
+font-family:'Inter',sans-serif;
+background:#0f172a;
+color:#e2e8f0;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+.container{
+width:450px;
+background:#111827;
+border-radius:20px;
+padding:25px;
+box-shadow:0 20px 50px rgba(0,0,0,0.6);
+border:1px solid rgba(255,255,255,0.05);
+}
+
+.header{
+text-align:center;
+margin-bottom:20px;
+}
+
+.header h1{
+margin:0;
+font-size:22px;
+font-weight:600;
+}
+
+.header p{
+margin:5px 0 0;
+font-size:13px;
+opacity:0.6;
+}
+
+#dropzone{
+border:2px dashed rgba(255,255,255,0.15);
+border-radius:15px;
+height:240px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+transition:0.3s;
+cursor:pointer;
+background:#020617;
+}
+
+#dropzone.hover{
+border-color:#38bdf8;
+background:rgba(56,189,248,0.08);
+}
+
+#dropzone span{
+font-size:14px;
+opacity:0.7;
+}
+
+#preview{
+max-width:100%;
+max-height:170px;
+border-radius:10px;
+margin-top:10px;
+display:none;
+}
+
+.actions{
+margin-top:10px;
+display:flex;
+justify-content:center;
+}
+
+button{
+background:#38bdf8;
+border:none;
+padding:10px 18px;
+border-radius:8px;
+color:#020617;
+font-weight:600;
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+background:#0ea5e9;
+}
+
+#result{
+margin-top:20px;
+}
+
+.prediction{
+margin-top:10px;
+padding:10px;
+border-radius:10px;
+background:#020617;
+border:1px solid rgba(255,255,255,0.05);
+}
+
+.label{
+display:flex;
+justify-content:space-between;
+font-size:13px;
+}
+
+.bar{
+height:6px;
+background:#1e293b;
+border-radius:5px;
+margin-top:6px;
+overflow:hidden;
+}
+
+.fill{
+height:100%;
+background:linear-gradient(90deg,#38bdf8,#22c55e);
+}
+
+.loader{
+border:3px solid rgba(255,255,255,0.1);
+border-top:3px solid #38bdf8;
+border-radius:50%;
+width:25px;
+height:25px;
+animation:spin 1s linear infinite;
+margin:auto;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);} 
+100%{transform:rotate(360deg);} 
+}
+
+.footer{
+margin-top:15px;
+font-size:11px;
+text-align:center;
+opacity:0.5;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">
+<h1>🧠 AI Image Classifier</h1>
+<p>Powered by TensorFlow.js & MobileNet</p>
+</div>
+
+<div id="dropzone">
+<span>Drag & Drop Image or Click to Upload</span>
+<img id="preview">
+<input type="file" id="fileInput" hidden>
+</div>
+
+<div class="actions">
+<button onclick="document.getElementById('fileInput').click()">Upload Image</button>
+</div>
+
+<div id="result">
+<div class="loader"></div>
+<p style="text-align:center">Loading Model...</p>
+</div>
+
+<div class="footer">Top-3 Predictions • Real-time AI</div>
+
+</div>
+
+<script>
+
+let model;
+
+async function loadModel(){
+model = await mobilenet.load();
+document.getElementById("result").innerHTML="<p style='text-align:center'>✅ Model Ready</p>";
+}
+
+const dropzone=document.getElementById("dropzone");
+const preview=document.getElementById("preview");
+const fileInput=document.getElementById("fileInput");
+
+function handleFile(file){
+const reader=new FileReader();
+
+reader.onload=async event=>{
+
+preview.style.display="block";
+preview.src=event.target.result;
+
+document.getElementById("result").innerHTML="<p style='text-align:center'>🔍 Analyzing...</p>";
+
+preview.onload=async ()=>{
+
+const predictions=await model.classify(preview);
+
+let html="";
+
+predictions.slice(0,3).forEach(p=>{
+
+const confidence=(p.probability*100).toFixed(1);
+
+html+=`
+<div class="prediction">
+<div class="label">
+<span>${p.className}</span>
+<span>${confidence}%</span>
+</div>
+<div class="bar">
+<div class="fill" style="width:${confidence}%"></div>
+</div>
+</div>
+`;
+
+});
+
+document.getElementById("result").innerHTML=html;
+
+};
+
+};
+
+reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener("change",e=>{
+handleFile(e.target.files[0]);
+});
+
+dropzone.addEventListener("click",()=>fileInput.click());
+
+dropzone.addEventListener("dragover",e=>{
+e.preventDefault();
+dropzone.classList.add("hover");
+});
+
+dropzone.addEventListener("dragleave",()=>{
+dropzone.classList.remove("hover");
+});
+
+dropzone.addEventListener("drop",e=>{
+e.preventDefault();
+dropzone.classList.remove("hover");
+handleFile(e.dataTransfer.files[0]);
+});
+
+loadModel();
+
+</script>
+
+</body>
+</html>
