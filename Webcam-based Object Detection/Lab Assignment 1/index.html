@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI Webcam Classifier</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0f2027;
+background:linear-gradient(to right,#2c5364,#203a43,#0f2027);
+color:white;
+text-align:center;
+margin:0;
+padding:20px;
+}
+
+h1{
+margin-bottom:10px;
+}
+
+#status{
+margin-bottom:20px;
+font-size:14px;
+}
+
+.container{
+display:flex;
+justify-content:center;
+gap:30px;
+flex-wrap:wrap;
+}
+
+video{
+border-radius:15px;
+box-shadow:0 5px 20px rgba(0,0,0,0.5);
+}
+
+.result{
+background:rgba(255,255,255,0.1);
+padding:20px;
+border-radius:15px;
+width:250px;
+}
+
+.prediction{
+font-size:20px;
+margin:10px 0;
+}
+
+.confidence{
+color:#00ffcc;
+}
+
+button{
+margin-top:20px;
+padding:10px 20px;
+border:none;
+border-radius:8px;
+background:#ff9800;
+color:white;
+font-size:16px;
+cursor:pointer;
+}
+
+button:hover{
+background:#e68900;
+}
+
+canvas{
+display:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🤖 AI Webcam Classifier</h1>
+<div id="status">Initializing...</div>
+
+<div class="container">
+
+<video id="webcam" width="400" height="300" autoplay muted></video>
+
+<div class="result">
+<div>Prediction:</div>
+<div id="prediction" class="prediction">--</div>
+
+<div id="confidence" class="confidence">--</div>
+</div>
+
+</div>
+
+<button onclick="toggle()">Pause / Resume</button>
+
+<canvas id="canvas" width="224" height="224"></canvas>
+
+<script>
+
+let model;
+let detecting = true;
+
+async function setupCamera() {
+    const video = document.getElementById("webcam");
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+        });
+
+        video.srcObject = stream;
+
+        return new Promise(resolve => {
+            video.onloadedmetadata = () => {
+                video.play();
+                resolve(video);
+            };
+        });
+
+    } catch (error) {
+        alert("Camera not working. Please allow permission.");
+        console.error(error);
+    }
+}
+
+async function loadModel() {
+    document.getElementById("status").innerText = "Loading AI Model...";
+    
+    model = await mobilenet.load();
+
+    document.getElementById("status").innerText = "✅ Model Loaded - Detecting...";
+}
+
+function toggle(){
+    detecting = !detecting;
+
+    document.getElementById("status").innerText =
+        detecting ? "✅ Detecting..." : "⏸ Paused";
+
+    if(detecting){
+        predict(document.getElementById("webcam"));
+    }
+}
+
+async function predict(video) {
+
+    if (!model) return;
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (video.readyState === 4) {
+
+        ctx.drawImage(video, 0, 0, 224, 224);
+
+        try {
+            const predictions = await model.classify(canvas);
+
+            const best = predictions[0];
+
+            document.getElementById("prediction").innerText =
+                best.className;
+
+            document.getElementById("confidence").innerText =
+                "Confidence: " + (best.probability * 100).toFixed(2) + "%";
+
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    if (detecting) {
+        setTimeout(() => predict(video), 300);
+    }
+}
+
+async function main() {
+    const video = await setupCamera();
+    await loadModel();
+    predict(video);
+}
+
+main();
+
+</script>
+
+</body>
+</html>
